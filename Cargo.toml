@@ -1,0 +1,16 @@
+[package]
+name = "grml_state_bc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cfgrammar = "0.13.1"
+lrlex = "0.13.1"
+lrpar = "0.13.1"
+
+[build-dependencies]
+cfgrammar = "0.13.1"
+lrlex = "0.13.1"
+lrpar = "0.13.1"
