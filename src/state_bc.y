@@ -57,11 +57,26 @@ SpawnElement -> Result<SpawnElement, Box<dyn Error>>:
 	}
 	;
 
-FunctionBody -> Result<u64, Box<dyn Error>>: 
-	Expr { Ok($1?) }
+FunctionBody -> Result<TypedInt, Box<dyn Error>>: 
+	TypedIntExpr { Ok($1?) }
 	;
 	
-Expr -> Result<u64, Box<dyn Error>>:
+
+TypedIntExpr -> Result<TypedInt, Box<dyn Error>>:
+	Expr TypeName {
+		match $2? {
+			TypeName::U8 => Ok(TypedInt::U8($1? as u8)),
+			TypeName::I32 => Ok(TypedInt::I32($1? as i32)),
+		}
+	}
+	;
+
+TypeName -> Result<TypeName, Box<dyn Error>>: 
+	'u8' { Ok(TypeName::U8) }
+	| 'i32' { Ok(TypeName::I32) }
+	;
+	
+Expr -> Result<i64, Box<dyn Error>>:
 	Expr '+' Term {
 		Ok($1? + $3?)
 	}
@@ -70,7 +85,7 @@ Expr -> Result<u64, Box<dyn Error>>:
 	}
 	;
 
-Term -> Result<u64, Box<dyn Error>>:
+Term -> Result<i64, Box<dyn Error>>:
 	'INT' {
         parse_int($lexer.span_str($1.map_err(|_| "<evaluation aborted>")?.span()))
 	}
@@ -100,11 +115,11 @@ fn flatten<T>(lhs: Result<Vec<T>, Box<dyn Error>>, rhs: Result<T, Box<dyn Error>
     Ok(flt)
 }
 
-fn parse_int(s: &str) -> Result<u64, Box<dyn Error>> {
-    match s.parse::<u64>() {
+fn parse_int(s: &str) -> Result<i64, Box<dyn Error>> {
+    match s.parse::<i64>() {
         Ok(val) => Ok(val),
         Err(_) => {
-            Err(Box::from(format!("{} cannot be represented as a u64", s)))
+            Err(Box::from(format!("{} cannot be represented as a i64", s)))
         }
     }
 }
@@ -114,17 +129,27 @@ pub enum Toplevel {
 	States{name: Span, elements: Vec<StateElement>},
 	Spawn{name: Span, elements: Vec<SpawnElement> },
 	Enum(Vec<Span>),
-	Function { name: Span, body: u64 },
+	Function { name: Span, body: TypedInt },
 }
 #[derive(Debug)]
 pub enum StateElement {
-	State { sprite: Span, directional: bool, timeout: u64, think: Span, action: Span, next: Span},
+	State { sprite: Span, directional: bool, timeout: i64, think: Span, action: Span, next: Span},
 	Label(Span)
 }
 #[derive(Debug)]
 pub struct SpawnElement {
 	directional: bool,
-	id: u64,
+	id: i64,
 	state: Span,
 	drop: Span,
+}
+#[derive(Debug)]
+enum TypedInt {
+	U8(u8),
+	I32(i32),
+}
+#[derive(Debug)]
+enum TypeName {
+	U8,
+	I32,
 }
