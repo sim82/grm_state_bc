@@ -1,25 +1,25 @@
-%start ToplevelDecls
+%start File
 %avoid_insert "INT"
 %%
-ToplevelDecls -> Result<Vec<Toplevel>, Box<dyn Error>>:
+File -> Result<Vec<Toplevel>, Box<dyn Error>>:
 	Toplevel { Ok(vec![$1?]) }
-	| ToplevelDecls Toplevel { flatten( $1, $2 ) }
+	| File Toplevel { flatten( $1, $2 ) }
 	;
 Toplevel -> Result<Toplevel, Box<dyn Error>>:
 	States { $1 }
-	| EnumDecl { $1 }
+	| Enum { $1 }
 	| Spawn { $1 }
 	;
 
 States -> Result<Toplevel, Box<dyn Error>>:
-	'states' 'IDENTIFIER' '{' StatesContent '}' {
+	'states' 'IDENTIFIER' '{' StatesBody '}' {
 		Ok(Toplevel::States{name: $2?.span(), elements: $4?})
 	}
 	;
 
-StatesContent -> Result<Vec<StateElement>, Box<dyn Error>>:
+StatesBody -> Result<Vec<StateElement>, Box<dyn Error>>:
 	StateElement { Ok(vec![$1?])}
-	| StatesContent StateElement { flatten($1, $2) }  
+	| StatesBody StateElement { flatten($1, $2) }  
 	;
 
 StateElement -> Result<StateElement,Box<dyn Error>>:
@@ -31,34 +31,34 @@ StateElement -> Result<StateElement,Box<dyn Error>>:
 	}
 	;
 
-EnumDecl -> Result<Toplevel, Box<dyn Error>>:
-	'enum' '{' EnumDeclContent '}' {
-		Ok(Toplevel::EnumDecl($3?))
+Enum -> Result<Toplevel, Box<dyn Error>>:
+	'enum' '{' EnumBody '}' {
+		Ok(Toplevel::Enum($3?))
 	}
 	;
 
-EnumDeclContent -> Result<Vec<Span>,Box<dyn Error>>:
+EnumBody -> Result<Vec<Span>,Box<dyn Error>>:
 	'IDENTIFIER' { Ok(vec![$1?.span()])}
-	| EnumDeclContent ',' 'IDENTIFIER' { flatten($1,Ok($2?.span()))	}
+	| EnumBody ',' 'IDENTIFIER' { flatten($1,Ok($2?.span()))	}
 	;
 	
 Spawn -> Result<Toplevel, Box<dyn Error>>:
-	'spawn' 'IDENTIFIER' '{' SpawnDecl '}' {
+	'spawn' 'IDENTIFIER' '{' SpawnBody '}' {
 		Ok(Toplevel::Spawn{ name: $2?.span(), elements: $4? })
 	}
 	;
 	
-SpawnDecl -> Result<Vec<SpawnDeclElement>,Box<dyn Error>>:
-	SpawnDeclElement { Ok(vec![$1?])}
-	| SpawnDecl SpawnDeclElement { flatten($1,$2) }
+SpawnBody -> Result<Vec<SpawnElement>,Box<dyn Error>>:
+	SpawnElement { Ok(vec![$1?])}
+	| SpawnBody SpawnElement { flatten($1,$2) }
 	;
 
-SpawnDeclElement -> Result<SpawnDeclElement, Box<dyn Error>>:
+SpawnElement -> Result<SpawnElement, Box<dyn Error>>:
 	'directional' Expr ',' 'IDENTIFIER' ',' 'IDENTIFIER' {
-		Ok(SpawnDeclElement { directional: true, id: $2?, state: $4?.span(), drop: $6?.span() })
+		Ok(SpawnElement { directional: true, id: $2?, state: $4?.span(), drop: $6?.span() })
 	}
 	| 'undirectional' Expr ',' 'IDENTIFIER' ',' 'IDENTIFIER' {
-		Ok(SpawnDeclElement { directional: false, id: $2?, state: $4?.span(), drop: $6?.span() })
+		Ok(SpawnElement { directional: false, id: $2?, state: $4?.span(), drop: $6?.span() })
 	}
 	;
 
@@ -113,8 +113,8 @@ fn parse_int(s: &str) -> Result<u64, Box<dyn Error>> {
 #[derive(Debug)]
 pub enum Toplevel {
 	States{name: Span, elements: Vec<StateElement>},
-	Spawn{name: Span, elements: Vec<SpawnDeclElement> },
-	EnumDecl(Vec<Span>)
+	Spawn{name: Span, elements: Vec<SpawnElement> },
+	Enum(Vec<Span>)
 }
 #[derive(Debug)]
 pub enum StateElement {
@@ -122,7 +122,7 @@ pub enum StateElement {
 	Label(Span)
 }
 #[derive(Debug)]
-pub struct SpawnDeclElement {
+pub struct SpawnElement {
 	directional: bool,
 	id: u64,
 	state: Span,
