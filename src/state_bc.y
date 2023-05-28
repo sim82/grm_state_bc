@@ -16,6 +16,9 @@ Toplevel -> Result<Toplevel, Box<dyn Error>>:
 	| 'spawn' 'IDENTIFIER' '{' SpawnBody '}' {
 		Ok(Toplevel::Spawn{ name: $2?.span(), elements: $4? })
 	}
+	| 'function' 'IDENTIFIER' '{' FunctionBody '}' {
+		Ok(Toplevel::Function{ name: $2?.span(), body: $4?  })
+	}
 	;
 
 
@@ -54,6 +57,10 @@ SpawnElement -> Result<SpawnElement, Box<dyn Error>>:
 	}
 	;
 
+FunctionBody -> Result<u64, Box<dyn Error>>: 
+	Expr { Ok($1?) }
+	;
+	
 Expr -> Result<u64, Box<dyn Error>>:
 	Expr '+' Term {
 		Ok($1? + $3?)
@@ -106,7 +113,8 @@ fn parse_int(s: &str) -> Result<u64, Box<dyn Error>> {
 pub enum Toplevel {
 	States{name: Span, elements: Vec<StateElement>},
 	Spawn{name: Span, elements: Vec<SpawnElement> },
-	Enum(Vec<Span>)
+	Enum(Vec<Span>),
+	Function { name: Span, body: u64 },
 }
 #[derive(Debug)]
 pub enum StateElement {
