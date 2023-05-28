@@ -5,17 +5,19 @@ File -> Result<Vec<Toplevel>, Box<dyn Error>>:
 	Toplevel { Ok(vec![$1?]) }
 	| File Toplevel { flatten( $1, $2 ) }
 	;
-Toplevel -> Result<Toplevel, Box<dyn Error>>:
-	States { $1 }
-	| Enum { $1 }
-	| Spawn { $1 }
-	;
 
-States -> Result<Toplevel, Box<dyn Error>>:
+Toplevel -> Result<Toplevel, Box<dyn Error>>: 
 	'states' 'IDENTIFIER' '{' StatesBody '}' {
 		Ok(Toplevel::States{name: $2?.span(), elements: $4?})
 	}
+	| 'enum' '{' EnumBody '}' {
+		Ok(Toplevel::Enum($3?))
+	}
+	| 'spawn' 'IDENTIFIER' '{' SpawnBody '}' {
+		Ok(Toplevel::Spawn{ name: $2?.span(), elements: $4? })
+	}
 	;
+
 
 StatesBody -> Result<Vec<StateElement>, Box<dyn Error>>:
 	StateElement { Ok(vec![$1?])}
@@ -31,22 +33,12 @@ StateElement -> Result<StateElement,Box<dyn Error>>:
 	}
 	;
 
-Enum -> Result<Toplevel, Box<dyn Error>>:
-	'enum' '{' EnumBody '}' {
-		Ok(Toplevel::Enum($3?))
-	}
-	;
 
 EnumBody -> Result<Vec<Span>,Box<dyn Error>>:
 	'IDENTIFIER' { Ok(vec![$1?.span()])}
 	| EnumBody ',' 'IDENTIFIER' { flatten($1,Ok($2?.span()))	}
 	;
 	
-Spawn -> Result<Toplevel, Box<dyn Error>>:
-	'spawn' 'IDENTIFIER' '{' SpawnBody '}' {
-		Ok(Toplevel::Spawn{ name: $2?.span(), elements: $4? })
-	}
-	;
 	
 SpawnBody -> Result<Vec<SpawnElement>,Box<dyn Error>>:
 	SpawnElement { Ok(vec![$1?])}
