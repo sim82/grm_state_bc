@@ -16,7 +16,7 @@ Toplevel -> Result<Toplevel, Box<dyn Error>>:
 	| 'spawn' 'IDENTIFIER' '{' SpawnBody '}' {
 		Ok(Toplevel::Spawn{ name: $2?.span(), elements: $4? })
 	}
-	| 'function' 'IDENTIFIER' '{' FunctionBody '}' {
+	| 'function' 'IDENTIFIER' '{' WordList '}' {
 		Ok(Toplevel::Function{ name: $2?.span(), body: $4?  })
 	}
 	;
@@ -57,10 +57,20 @@ SpawnElement -> Result<SpawnElement, Box<dyn Error>>:
 	}
 	;
 
-FunctionBody -> Result<TypedInt, Box<dyn Error>>: 
-	TypedIntExpr { Ok($1?) }
+
+WordList -> Result<Vec<Word>, Box<dyn Error>>:
+	Word { Ok(vec![$1?]) }
+	| WordList Word { flatten($1, $2) }
 	;
 	
+Word -> Result<Word, Box<dyn Error>>:
+	TypedIntExpr { Ok(Word::Push($1?)) }
+	| 'trap' { Ok(Word::Trap )}
+	| 'not' { Ok(Word::Not)}
+	| 'if' WordList 'then' { Ok(Word::If($2?))}
+	| 'STATE_LABEL' { Ok(Word::PushStateLabel($1?.span()))}
+	| 'gostate' { Ok(Word::GoState) }
+	;
 
 TypedIntExpr -> Result<TypedInt, Box<dyn Error>>:
 	Expr TypeName {
@@ -129,13 +139,15 @@ pub enum Toplevel {
 	States{name: Span, elements: Vec<StateElement>},
 	Spawn{name: Span, elements: Vec<SpawnElement> },
 	Enum(Vec<Span>),
-	Function { name: Span, body: TypedInt },
+	Function { name: Span, body: Vec<Word> },
 }
+
 #[derive(Debug)]
 pub enum StateElement {
 	State { sprite: Span, directional: bool, timeout: i64, think: Span, action: Span, next: Span},
 	Label(Span)
 }
+
 #[derive(Debug)]
 pub struct SpawnElement {
 	directional: bool,
@@ -143,13 +155,25 @@ pub struct SpawnElement {
 	state: Span,
 	drop: Span,
 }
+
 #[derive(Debug)]
-enum TypedInt {
+pub enum TypedInt {
 	U8(u8),
 	I32(i32),
 }
+
 #[derive(Debug)]
-enum TypeName {
+pub enum TypeName {
 	U8,
 	I32,
+}
+
+#[derive(Debug)]
+pub enum Word {
+	Push(TypedInt),
+	PushStateLabel(Span),
+	Trap,
+	Not,
+	If(Vec<Word>),
+	GoState,
 }
